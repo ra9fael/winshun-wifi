@@ -1,0 +1,48 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LingCore/WinShun-plugins/main/schema/plugin.schema.json",
+  "manifest": 1,
+  "id": "ra9fael.wifi",
+  "name": {"zh": "Wi-Fi", "en": "Wi-Fi"},
+  "version": "0.1.0",
+  "description": {
+    "zh": "列出已保存与附近的 Wi-Fi：Enter 连接，Ctrl+Enter 断开，Shift+Enter 查看密码（UAC），支持忘记网络与复制配置；纯 wlanapi，不解析 netsh",
+    "en": "List saved and nearby Wi-Fi networks: Enter connects, Ctrl+Enter disconnects, Shift+Enter reveals the password (UAC); forget or copy profiles. Native wlanapi, no netsh parsing"
+  },
+  "author": "ra9fael",
+  "homepage": "https://github.com/ra9fael/winshun-wifi",
+  "license": "MIT",
+  "minWinShun": "0.22.0",
+  "permissions": ["elevated", "clipboard:write"],
+  "runtime": {
+    "mode": "resident",
+    "program": "wifi.exe",
+    "sandbox": "normal",
+    "start": "lazy",
+    "timeoutMs": 3000,
+    "memoryMB": 64,
+    "idleExitSec": 300
+  },
+  "commands": [
+    {
+      "id": "wifi",
+      "keyword": ["wifi", "无线"],
+      "title": {"zh": "Wi-Fi", "en": "Wi-Fi"},
+      "hint": {"zh": "留空看当前连接与已保存网络；输入筛选 SSID", "en": "empty shows the current connection and saved networks; type to filter SSID"},
+      "actions": [
+        {"id": "connect", "title": {"zh": "连接", "en": "Connect"}, "key": "Enter"},
+        {"id": "disconnect", "title": {"zh": "断开", "en": "Disconnect"}, "key": "Ctrl+Enter"},
+        {"id": "password", "title": {"zh": "查看密码（UAC）", "en": "Reveal password (UAC)"}, "key": "Shift+Enter"},
+        {"id": "copyPassword", "title": {"zh": "复制密码", "en": "Copy password"}, "key": ""},
+        {"id": "copyXml", "title": {"zh": "复制配置 XML", "en": "Copy profile XML"}, "key": ""},
+        {"id": "forget", "title": {"zh": "忘记网络", "en": "Forget network"}, "key": ""}
+      ],
+      "ai": {
+        "description": "Show the current Wi-Fi connection (SSID, band, channel, signal, auth), saved profiles and visible networks with signal strength. Actions connect, disconnect, reveal or copy the password (elevated), copy the profile XML, or forget a network. Passwords are never persisted."
+      }
+    }
+  ],
+  "settings": [
+    {"key": "includeHidden", "type": "bool", "title": {"zh": "包含隐藏网络", "en": "Include hidden networks"}, "default": true},
+    {"key": "showPasswordMasked", "type": "bool", "title": {"zh": "密码默认打码", "en": "Mask passwords by default"}, "hint": {"zh": "关闭后查看时直接明文显示", "en": "when off, revealed passwords show in plain text"}, "default": true}
+  ]
+}
