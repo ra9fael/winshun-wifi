@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="348" viewBox="0 0 680 348" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <rect x="0.5" y="0.5" width="679" height="347" rx="10" fill="#1b1b1f" stroke="#3a3a42"/>
+  <!-- search box -->
+  <rect x="14" y="14" width="652" height="38" rx="8" fill="#26262b" stroke="#3a3a42"/>
+  <text x="30" y="39" font-size="15" fill="#e5e5e5">wifi</text>
+  <rect x="60" y="24" width="1.5" height="19" fill="#7aa2f7"/>
+  <text x="650" y="39" font-size="12" fill="#6b6b74" text-anchor="end">关键词：wifi / 无线</text>
+  <!-- row 1: connected -->
+  <rect x="10" y="62" width="660" height="46" rx="8" fill="#2a2a31"/>
+  <circle cx="30" cy="85" r="5" fill="#16a34a"/>
+  <text x="46" y="91" font-size="15" fill="#e5e5e5">HJJ</text>
+  <text x="656" y="91" font-size="12" fill="#9a9aa3" text-anchor="end">98% · 2402 Mbps · WPA2 · 已连接</text>
+  <!-- row 2 -->
+  <circle cx="30" cy="133" r="5" fill="#2563eb"/>
+  <text x="46" y="139" font-size="15" fill="#e5e5e5">IMP-Wireless</text>
+  <text x="656" y="139" font-size="12" fill="#9a9aa3" text-anchor="end">open · 已保存</text>
+  <!-- row 3 -->
+  <circle cx="30" cy="181" r="5" fill="#2563eb"/>
+  <text x="46" y="187" font-size="15" fill="#e5e5e5">RFK90PPPPM</text>
+  <text x="656" y="187" font-size="12" fill="#9a9aa3" text-anchor="end">WPA2 · 已保存 · 不在范围内</text>
+  <!-- row 4 -->
+  <circle cx="30" cy="229" r="5" fill="#64748b"/>
+  <text x="46" y="235" font-size="15" fill="#e5e5e5">ZTE-NbzPG3</text>
+  <text x="656" y="235" font-size="12" fill="#9a9aa3" text-anchor="end">74% · 5 GHz ch149 · WPA2</text>
+  <!-- row 5 -->
+  <circle cx="30" cy="277" r="5" fill="#64748b"/>
+  <text x="46" y="283" font-size="15" fill="#e5e5e5">eduroam</text>
+  <text x="656" y="283" font-size="12" fill="#9a9aa3" text-anchor="end">61% · 5 GHz · WPA2-Enterprise</text>
+  <!-- footer -->
+  <rect x="10" y="304" width="660" height="34" rx="8" fill="#232327"/>
+  <rect x="26" y="312" width="46" height="18" rx="4" fill="#33333b" stroke="#4a4a55"/>
+  <text x="49" y="325" font-size="11" fill="#c5c5cd" text-anchor="middle">Enter</text>
+  <text x="78" y="325" font-size="12" fill="#9a9aa3">连接</text>
+  <rect x="116" y="312" width="36" height="18" rx="4" fill="#33333b" stroke="#4a4a55"/>
+  <text x="134" y="325" font-size="11" fill="#c5c5cd" text-anchor="middle">Ctrl</text>
+  <rect x="158" y="312" width="46" height="18" rx="4" fill="#33333b" stroke="#4a4a55"/>
+  <text x="181" y="325" font-size="11" fill="#c5c5cd" text-anchor="middle">Enter</text>
+  <text x="210" y="325" font-size="12" fill="#9a9aa3">断开</text>
+  <rect x="248" y="312" width="42" height="18" rx="4" fill="#33333b" stroke="#4a4a55"/>
+  <text x="269" y="325" font-size="11" fill="#c5c5cd" text-anchor="middle">Shift</text>
+  <rect x="296" y="312" width="46" height="18" rx="4" fill="#33333b" stroke="#4a4a55"/>
+  <text x="319" y="325" font-size="11" fill="#c5c5cd" text-anchor="middle">Enter</text>
+  <text x="348" y="325" font-size="12" fill="#9a9aa3">查看密码</text>
+  <text x="656" y="325" font-size="12" fill="#6b6b74" text-anchor="end">已保存行：复制密码 / 复制 XML / 忘记网络</text>
+</svg>

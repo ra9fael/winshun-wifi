@@ -21,10 +21,17 @@ cmake --build build
    - `LICENSE`
 3. 计算 SHA-256：`Get-FileHash dist\ra9fael.wifi-<ver>.wsplugin`
 
+## 已出包记录
+
+| 版本 | 日期 | SHA-256（整包） | 备注 |
+|---|---|---|---|
+| 0.1.0 | 2026-11-08 | —（早于本记录） | 首包，电台关闭期实测 |
+| 0.1.1 | 2026-11-08 | `0D6D79D7EC4F65177E6261C503E3B4182C91FBD4D4D9C998559C7A251CBE7B2A` | 电台开启后的完整 E2E（tests.md §3.1）之后重打；包内 wifi.exe 与仓库构建逐字节一致（SHA-256 `1549A3B906A304F281A0E542AD5E7A030DE0BCD4ED811C9D5667D5DD0CEC6C25`） |
+
 ## 发布
 
 1. `git tag v<ver> && git push origin main --tags`
-2. GitHub Release `v<ver>`：上传 `.wsplugin`；release notes 写变更点、SHA-256、构建命令，并注明：查看密码需要管理员（按需 UAC，非安装时），密码不落盘
+2. GitHub Release `v<ver>`：上传 `.wsplugin`；release notes 写变更点、SHA-256、构建命令，并注明：查看密码走 `WlanGetProfile` 明文读取（插件不自行提权，读不到时如实报错），密码不落盘
 3. 声明为社区原生包（`unreviewed-native`）
 
 ## 安装（用户）

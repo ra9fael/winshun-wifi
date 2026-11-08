@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="200" viewBox="0 0 680 200" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <rect x="0.5" y="0.5" width="679" height="199" rx="10" fill="#1b1b1f" stroke="#3a3a42"/>
+  <!-- search box with the confirm query -->
+  <rect x="14" y="14" width="652" height="38" rx="8" fill="#26262b" stroke="#3a3a42"/>
+  <text x="30" y="39" font-size="15" fill="#7aa2f7">wifi</text>
+  <text x="62" y="39" font-size="15" fill="#e5e5e5">forget HJJ</text>
+  <rect x="152" y="24" width="1.5" height="19" fill="#7aa2f7"/>
+  <!-- confirm row -->
+  <rect x="10" y="62" width="660" height="46" rx="8" fill="#2a1c1e"/>
+  <circle cx="30" cy="85" r="5" fill="#dc2626"/>
+  <text x="46" y="91" font-size="15" fill="#f87171">⚠ 忘记 HJJ？</text>
+  <text x="656" y="91" font-size="12" fill="#9a9aa3" text-anchor="end">Enter 删除这个配置；Esc 返回列表</text>
+  <!-- footer -->
+  <rect x="10" y="118" width="660" height="34" rx="8" fill="#232327"/>
+  <rect x="26" y="126" width="46" height="18" rx="4" fill="#33333b" stroke="#4a4a55"/>
+  <text x="49" y="139" font-size="11" fill="#c5c5cd" text-anchor="middle">Enter</text>
+  <text x="78" y="139" font-size="12" fill="#9a9aa3">确认删除</text>
+  <rect x="146" y="126" width="36" height="18" rx="4" fill="#33333b" stroke="#4a4a55"/>
+  <text x="164" y="139" font-size="11" fill="#c5c5cd" text-anchor="middle">Esc</text>
+  <text x="188" y="139" font-size="12" fill="#9a9aa3">返回列表（什么都没删）</text>
+  <text x="656" y="139" font-size="12" fill="#6b6b74" text-anchor="end">删除成功后自动回到普通列表</text>
+  <!-- annotation -->
+  <text x="30" y="180" font-size="11" fill="#6b6b74">确认态挂在输入框文字上，不是二级页面：Esc 清掉这段字就回到 wifi 列表。</text>
+</svg>

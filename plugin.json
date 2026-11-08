@@ -3,10 +3,10 @@
   "manifest": 1,
   "id": "ra9fael.wifi",
   "name": {"zh": "Wi-Fi", "en": "Wi-Fi"},
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": {
-    "zh": "列出已保存与附近的 Wi-Fi：Enter 连接，Ctrl+Enter 断开，Shift+Enter 查看密码（UAC），支持忘记网络与复制配置；纯 wlanapi，不解析 netsh",
-    "en": "List saved and nearby Wi-Fi networks: Enter connects, Ctrl+Enter disconnects, Shift+Enter reveals the password (UAC); forget or copy profiles. Native wlanapi, no netsh parsing"
+    "zh": "列出已保存与附近的 Wi-Fi：Enter 连接，Ctrl+Enter 断开，Shift+Enter 查看密码，支持忘记网络与复制配置；纯 wlanapi，不解析 netsh",
+    "en": "List saved and nearby Wi-Fi networks: Enter connects, Ctrl+Enter disconnects, Shift+Enter reveals the password; forget or copy profiles. Native wlanapi, no netsh parsing"
   },
   "author": "ra9fael",
   "homepage": "https://github.com/ra9fael/winshun-wifi",
@@ -31,13 +31,13 @@
       "actions": [
         {"id": "connect", "title": {"zh": "连接", "en": "Connect"}, "key": "Enter"},
         {"id": "disconnect", "title": {"zh": "断开", "en": "Disconnect"}, "key": "Ctrl+Enter"},
-        {"id": "password", "title": {"zh": "查看密码（UAC）", "en": "Reveal password (UAC)"}, "key": "Shift+Enter"},
+        {"id": "password", "title": {"zh": "查看密码", "en": "Reveal password"}, "key": "Shift+Enter"},
         {"id": "copyPassword", "title": {"zh": "复制密码", "en": "Copy password"}, "key": ""},
         {"id": "copyXml", "title": {"zh": "复制配置 XML", "en": "Copy profile XML"}, "key": ""},
         {"id": "forget", "title": {"zh": "忘记网络", "en": "Forget network"}, "key": ""}
       ],
       "ai": {
-        "description": "Show the current Wi-Fi connection (SSID, band, channel, signal, auth), saved profiles and visible networks with signal strength. Actions connect, disconnect, reveal or copy the password (elevated), copy the profile XML, or forget a network. Passwords are never persisted."
+        "description": "Show the current Wi-Fi connection (SSID, band, channel, signal, auth), saved profiles and visible networks with signal strength. Actions connect, disconnect, reveal or copy the password, copy the profile XML, or forget a network. Passwords are never persisted."
       }
     }
   ],
