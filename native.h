@@ -249,7 +249,8 @@ inline bool currentConnection(HANDLE client, const InterfaceInfo& adapter, Netwo
         out.bssid = bssidText(attrs->wlanAssociationAttributes.dot11Bssid);
         out.interfaceName = adapter.name;
         out.connected = true;
-        out.saved = true;
+        out.profileName = winshun::utf8(attrs->strProfileName);
+        out.saved = !out.profileName.empty();
         out.visible = true;
         // wlanSignalQuality is 0-100; the rows carry dBm, so invert the
         // WiFi.signalQuality formula the rest of the plugin uses.
@@ -417,6 +418,7 @@ inline Snapshot collect(bool wantScan)
         for (const SavedProfile& profile : listProfiles(session.handle(), adapter.guid)) {
             Network n;
             n.saved = true;
+            n.profileName = profile.name;
             n.interfaceName = adapter.name;
             n.radioOff = adapter.radioOff;
             std::string xml;

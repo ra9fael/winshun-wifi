@@ -1,5 +1,14 @@
 # ra9fael.wifi 测试规格与实测记录
 
+## v0.2.0 二维码扩展
+
+`wifi` 已保存网络新增 copyQr、previewQr、saveQr。使用实际 WLAN profile 名与网卡定位配置，动作时重读明文；查询结果只携带网络和配置身份。`wifi_qr.h` 校验认证、转义 WIFI 载荷并渲染，`qrcode.h` 为从 ra9fael.qr 复用的 MIT 编码器，`qr_image.h` 使用 Win32/GDI+ 实现剪贴板、PNG 和独立消息线程预览，无 Qt 依赖。
+
+预览显示后调用 SetForegroundWindow、SetActiveWindow、SetFocus；重复打开先销毁旧窗口。宿主在用户动作前通过 AllowSetForegroundWindow 授权插件激活。新权限为 ui 与 Pictures 写入，保留 elevated 和 clipboard:write。只有 saveQr 会写含连接凭据的 PNG。
+
+`wifi_tests` 覆盖特殊字符、中文、隐藏网络、WEP、WPA3、企业认证、受保护或缺失密码，以及配置名与 SSID 不同的合并行为。`wifi_qr_native_tests` 使用虚构数据覆盖动作和 PNG，`--ui` 额外验证复制图片、连续预览的前台/键盘焦点、Esc 关闭。测试不改变真实网络连接。发布验证见 [validation-0.2.0.md](validation-0.2.0.md)。
+
+
 日期：2026-11-08 · 关联：[功能规格](spec.md) · 实现：`logic.h` / `native.h` / `main.cpp`
 
 > **2026-11-08 第二轮实测（电台开启）已追加到 §3**：真实扫描、连接/断开、真正的 forget 删除均已在真机跑通，驱动脚本在 `e2e/`。§2 的「本机限制」段落描述的是当天早些时候电台软件关闭时的状态，扫描路径现已由 §3.1 覆盖。

@@ -239,6 +239,7 @@ struct Profile {
     std::string cipherText; // raw <encryption>
     std::string keyMaterial; // plaintext only with WLAN_PROFILE_GET_PLAINTEXT_KEY
     bool oneX = false;
+    bool hidden = false;
     bool hasKey = false;   // a <sharedKey> section is present
     bool keyProtected = false;
     Auth auth = Auth::Unknown;
@@ -270,7 +271,10 @@ inline Profile parseProfile(const std::string& xml)
     }
     if (p.ssid.empty())
         p.ssid = p.name;
+    p.hidden = xmlText(xml, "nonBroadcast") == "true" || xmlText(xml, "nonBroadcast") == "1";
     p.auth = authFromText(p.authText, p.oneX);
+    if (!p.oneX && (p.cipherText == "WEP" || p.cipherText == "WEP40" || p.cipherText == "WEP104"))
+        p.auth = Auth::Wep;
     return p;
 }
 
@@ -358,6 +362,7 @@ inline std::string rateText(unsigned long long kbps)
 // merged (the same SSID seen in both is one network).
 struct Network {
     std::string ssid;
+    std::string profileName; // WLAN profile identity, which can differ from the SSID
     std::string bssid;      // "aa:bb:cc:dd:ee:ff"; empty for a profile with no scan hit
     std::string interfaceName;
     bool connected = false;
@@ -433,12 +438,20 @@ inline std::vector<Network> mergeBySsid(const std::vector<Network>& in)
             continue;
         }
         Network& kept = out[it->second];
+        if (!kept.saved && n.saved) {
+            kept.profileName = n.profileName;
+            kept.interfaceName = n.interfaceName;
+        } else if (kept.profileName.empty() && n.saved && kept.interfaceName == n.interfaceName) {
+            kept.profileName = n.profileName;
+        }
         kept.saved = kept.saved || n.saved;
         kept.visible = kept.visible || n.visible;
         kept.hidden = kept.hidden || n.hidden;
         if (n.connected) { // a connected hit is the one to keep in full
             const bool wasConnected = kept.connected;
             Network merged = n;
+            if (merged.profileName.empty() && kept.interfaceName == n.interfaceName)
+                merged.profileName = kept.profileName;
             merged.saved = kept.saved || n.saved;
             merged.visible = kept.visible || n.visible;
             merged.hidden = kept.hidden || n.hidden;

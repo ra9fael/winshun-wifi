@@ -2,17 +2,29 @@
   "$schema": "https://raw.githubusercontent.com/LingCore/WinShun-plugins/main/schema/plugin.schema.json",
   "manifest": 1,
   "id": "ra9fael.wifi",
-  "name": {"zh": "Wi-Fi", "en": "Wi-Fi"},
-  "version": "0.1.2",
+  "name": {
+    "zh": "Wi-Fi",
+    "en": "Wi-Fi"
+  },
+  "version": "0.2.0",
   "description": {
-    "zh": "列出已保存与附近的 Wi-Fi：Enter 连接，Ctrl+Enter 断开，Shift+Enter 查看密码，支持忘记网络与复制配置；纯 wlanapi，不解析 netsh",
-    "en": "List saved and nearby Wi-Fi networks: Enter connects, Ctrl+Enter disconnects, Shift+Enter reveals the password; forget or copy profiles. Native wlanapi, no netsh parsing"
+    "zh": "管理已保存与附近的 Wi-Fi：连接、断开、查看密码、生成扫码连接二维码、忘记网络与复制配置",
+    "en": "Manage saved and nearby Wi-Fi: connect, disconnect, reveal passwords, generate scan-to-join QR codes, forget networks and copy profiles"
   },
   "author": "ra9fael",
   "homepage": "https://github.com/ra9fael/winshun-wifi",
   "license": "MIT",
   "minWinShun": "0.22.0",
-  "permissions": ["elevated", "clipboard:write"],
+  "permissions": [
+    "elevated",
+    "clipboard:write",
+    "ui",
+    {
+      "files:write": [
+        "%USERPROFILE%\\Pictures"
+      ]
+    }
+  ],
   "runtime": {
     "mode": "resident",
     "program": "wifi.exe",
@@ -25,24 +37,119 @@
   "commands": [
     {
       "id": "wifi",
-      "keyword": ["wifi", "无线"],
-      "title": {"zh": "Wi-Fi", "en": "Wi-Fi"},
-      "hint": {"zh": "留空看当前连接与已保存网络；输入筛选 SSID", "en": "empty shows the current connection and saved networks; type to filter SSID"},
+      "keyword": [
+        "wifi",
+        "无线"
+      ],
+      "title": {
+        "zh": "Wi-Fi",
+        "en": "Wi-Fi"
+      },
+      "hint": {
+        "zh": "留空看当前连接与已保存网络；输入筛选 SSID",
+        "en": "empty shows the current connection and saved networks; type to filter SSID"
+      },
       "actions": [
-        {"id": "connect", "title": {"zh": "连接", "en": "Connect"}, "key": "Enter"},
-        {"id": "disconnect", "title": {"zh": "断开", "en": "Disconnect"}, "key": "Ctrl+Enter"},
-        {"id": "password", "title": {"zh": "查看密码", "en": "Reveal password"}, "key": "Shift+Enter"},
-        {"id": "copyPassword", "title": {"zh": "复制密码", "en": "Copy password"}, "key": ""},
-        {"id": "copyXml", "title": {"zh": "复制配置 XML", "en": "Copy profile XML"}, "key": ""},
-        {"id": "forget", "title": {"zh": "忘记网络", "en": "Forget network"}, "key": ""}
+        {
+          "id": "connect",
+          "title": {
+            "zh": "连接",
+            "en": "Connect"
+          },
+          "key": "Enter"
+        },
+        {
+          "id": "disconnect",
+          "title": {
+            "zh": "断开",
+            "en": "Disconnect"
+          },
+          "key": "Ctrl+Enter"
+        },
+        {
+          "id": "password",
+          "title": {
+            "zh": "查看密码",
+            "en": "Reveal password"
+          },
+          "key": "Shift+Enter"
+        },
+        {
+          "id": "copyPassword",
+          "title": {
+            "zh": "复制密码",
+            "en": "Copy password"
+          },
+          "key": ""
+        },
+        {
+          "id": "copyQr",
+          "title": {
+            "zh": "复制 Wi-Fi 二维码",
+            "en": "Copy Wi-Fi QR code"
+          },
+          "key": ""
+        },
+        {
+          "id": "previewQr",
+          "title": {
+            "zh": "预览 Wi-Fi 二维码",
+            "en": "Preview Wi-Fi QR code"
+          },
+          "key": ""
+        },
+        {
+          "id": "saveQr",
+          "title": {
+            "zh": "保存 Wi-Fi 二维码 PNG",
+            "en": "Save Wi-Fi QR PNG"
+          },
+          "key": ""
+        },
+        {
+          "id": "copyXml",
+          "title": {
+            "zh": "复制配置 XML",
+            "en": "Copy profile XML"
+          },
+          "key": ""
+        },
+        {
+          "id": "forget",
+          "title": {
+            "zh": "忘记网络",
+            "en": "Forget network"
+          },
+          "key": ""
+        }
       ],
       "ai": {
-        "description": "Show the current Wi-Fi connection (SSID, band, channel, signal, auth), saved profiles and visible networks with signal strength. Actions connect, disconnect, reveal or copy the password, copy the profile XML, or forget a network. Passwords are never persisted."
+        "description": "Show the current Wi-Fi connection (SSID, band, channel, signal, auth), saved profiles and visible networks with signal strength. Actions connect, disconnect, reveal or copy the password, copy the profile XML, or forget a network. Passwords are never persisted. Saved personal and open networks offer copyQr, previewQr and saveQr actions. QR actions read the saved profile on demand; no passwords or QR payloads appear in query results. Only saveQr persists the generated image, under Pictures."
       }
     }
   ],
   "settings": [
-    {"key": "includeHidden", "type": "bool", "title": {"zh": "包含隐藏网络", "en": "Include hidden networks"}, "default": true},
-    {"key": "showPasswordMasked", "type": "bool", "title": {"zh": "密码默认打码", "en": "Mask passwords by default"}, "hint": {"zh": "关闭后查看时直接明文显示", "en": "when off, revealed passwords show in plain text"}, "default": true}
+    {
+      "key": "includeHidden",
+      "type": "bool",
+      "title": {
+        "zh": "包含隐藏网络",
+        "en": "Include hidden networks"
+      },
+      "default": true
+    },
+    {
+      "key": "showPasswordMasked",
+      "type": "bool",
+      "title": {
+        "zh": "密码默认打码",
+        "en": "Mask passwords by default"
+      },
+      "hint": {
+        "zh": "关闭后查看时直接明文显示",
+        "en": "when off, revealed passwords show in plain text"
+      },
+      "default": true
+    }
   ]
 }

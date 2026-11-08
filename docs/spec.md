@@ -1,5 +1,14 @@
 # ra9fael.wifi 功能规格（v0.1.0）
 
+## v0.2.0 二维码扩展
+
+`wifi` 已保存网络新增 copyQr、previewQr、saveQr。使用实际 WLAN profile 名与网卡定位配置，动作时重读明文；查询结果只携带网络和配置身份。`wifi_qr.h` 校验认证、转义 WIFI 载荷并渲染，`qrcode.h` 为从 ra9fael.qr 复用的 MIT 编码器，`qr_image.h` 使用 Win32/GDI+ 实现剪贴板、PNG 和独立消息线程预览，无 Qt 依赖。
+
+预览显示后调用 SetForegroundWindow、SetActiveWindow、SetFocus；重复打开先销毁旧窗口。宿主在用户动作前通过 AllowSetForegroundWindow 授权插件激活。新权限为 ui 与 Pictures 写入，保留 elevated 和 clipboard:write。只有 saveQr 会写含连接凭据的 PNG。
+
+`wifi_tests` 覆盖特殊字符、中文、隐藏网络、WEP、WPA3、企业认证、受保护或缺失密码，以及配置名与 SSID 不同的合并行为。`wifi_qr_native_tests` 使用虚构数据覆盖动作和 PNG，`--ui` 额外验证复制图片、连续预览的前台/键盘焦点、Esc 关闭。测试不改变真实网络连接。发布验证见 [validation-0.2.0.md](validation-0.2.0.md)。
+
+
 状态：**已实施（2026-11-08）**，L1 单测与协议往返实测通过；真实无线网卡的手动 E2E 见 docs/tests.md §3。协议与清单字段以 WinShun 0.22.0 插件文档为准（resident JSON-RPC over stdio）。
 
 ## 1 目标
@@ -27,7 +36,7 @@
 - `Shift+Enter password` / `copyPassword`：
   - `WlanGetProfile` 带 `WLAN_PROFILE_GET_PLAINTEXT_KEY`
   - **不自行提权**（见下「提权裁决」）：直接请求明文，按返回结果判断。拿不到明文（返回仍是 `protected` 的 blob 或 `ERROR_ACCESS_DENIED`）→ 如实报错，不给假成功
-  - 明文只在内存里（`m_revealed`，按 SSID），供本会话的行显示与剪贴板；**不落盘**
+  - 明文只在内存里（`m_revealed`，按配置名），供本会话的行显示与剪贴板；**不落盘**
   - 列表中默认打码显示（`showPasswordMasked`），`copyPassword` 直接复制明文
 - `forget`：`WlanDeleteProfile`；危险操作，两段确认（见 §4.2）
 - `copyXml`：`WlanGetProfile` 返回的 XML 复制到剪贴板；keyMaterial 仍为 `protected` 时在结果行注明「密码段需管理员」
@@ -57,7 +66,7 @@
 1. **与宿主权限模型冲突**：宿主的 `elevated` 含义是「Win顺 以管理员身份运行时插件也以管理员身份运行」，并且宿主**从不**以管理员身份启动插件文件夹里的程序（该文件夹普通权限可写，任何普通程序都能先换掉 exe）。插件自己 `ShellExecuteExW("runas")` 自己的 exe，等于把这个洞重新打开一遍。宿主的 `elevated` 不是「插件可以弹 UAC」。
 2. **实测不需要**：2026-11-08 在本机实测（非管理员进程，`TokenIsElevated=0`），`WlanGetProfile` 带 `WLAN_PROFILE_GET_PLAINTEXT_KEY` **直接返回了明文**（`protected=false`，8 字节口令）；不带该标志时返回 460 字节的加密 blob。也就是说对当前用户自己的 profile，普通权限通常就能读到明文。
 
-因此清单**不声明** `processes`（不需要起子进程），只保留 `elevated` 与 `clipboard:write`。以管理员身份运行 Win顺 时插件跟随提权，行为不变；普通权限下若系统拒绝返回明文，则如实报错。
+因此清单**不声明** `processes`（不需要起子进程），保留 `elevated` 与 `clipboard:write`，并为二维码预览/保存增加 `ui` 与 Pictures 写入。以管理员身份运行 Win顺 时插件跟随提权，行为不变；普通权限下若系统拒绝返回明文，则如实报错。
 
 **未验证**：域环境、组策略下发 profile、其他用户创建的 profile 在普通权限下是否同样返回明文。这些情况下插件会走「如实报错」路径，不会假装成功。
 
@@ -68,17 +77,19 @@
 - 多接口（USB 网卡）全部列出，行内标接口名
 - 隐藏网络：`includeHidden` 控制是否列出（来自 scan list 的 hidden 标志）
 - 无线网卡不存在 / WlanSvc 未启动 → 提示行 `valid:false`
-- 纯 Win32 + CRT 的 wifi.exe，无 Qt 依赖，无 `ui` 权限
+- 纯 Win32 + CRT 的 wifi.exe，无 Qt 依赖；二维码预览使用原生窗口
 
 ## 6 权限
 
 - `elevated`：跟随 Win顺 的管理员权限（宿主语义，不是「插件能弹 UAC」）；明文密码读取在普通权限下通常也能成功，见 §4.1
-- `clipboard:write`：copyPassword / copyXml
-- 不做 `ui`、`network`、`processes`（不起子进程，因此不需要 `processes`）
+- `clipboard:write`：copyPassword / copyXml / copyQr
+- `ui`：Wi-Fi 二维码预览
+- `files:write`（Pictures）：用户主动保存二维码 PNG
+- 不做 `network`、`processes`（不起子进程）
 
 ## 7 数据位置
 
-不持久化；密码只存在于内存与剪贴板（copyPassword 时），不写日志、不写 `WS_DATA_DIR`。
+密码不进入日志或 WS_DATA_DIR；查看和复制只使用内存与剪贴板。只有用户主动执行 saveQr 时写出包含连接凭据的 PNG。
 
 ## 8 失败处理
 

@@ -14,11 +14,7 @@ cmake --build build
 ## 打包（.wsplugin）
 
 1. 确认 `plugin.json` 的 `version` 与发布 tag 一致
-2. `dist/ra9fael.wifi-<ver>.wsplugin` = zip，包含且仅包含：
-   - `plugin.json`
-   - `wifi.exe`
-   - `README.md`
-   - `LICENSE`
+2. `dist/ra9fael.wifi-<ver>.wsplugin` = zip，由 `python tools/package.py --tag v<ver>` 生成，包含 git 跟踪的非隐藏文件（源码、文档、图标、许可证）以及构建的 `wifi.exe`；排除 tools/verify。生成包 SHA-256 与 release-notes.md
 3. 计算 SHA-256：`Get-FileHash dist\ra9fael.wifi-<ver>.wsplugin`
 
 ## 已出包记录
@@ -31,14 +27,14 @@ cmake --build build
 ## 发布
 
 1. `git tag v<ver> && git push origin main --tags`
-2. GitHub Release `v<ver>`：上传 `.wsplugin`；release notes 写变更点、SHA-256、构建命令，并注明：查看密码走 `WlanGetProfile` 明文读取（插件不自行提权，读不到时如实报错），密码不落盘
+2. GitHub Release `v<ver>`：上传 `.wsplugin`；release notes 写变更点、SHA-256、构建命令，并注明：查看密码走 `WlanGetProfile` 明文读取（插件不自行提权，读不到时如实报错），查询和日志不包含密码；只有用户执行保存二维码动作才输出含连接凭据的 PNG
 3. 声明为社区原生包（`unreviewed-native`）
 
 ## 安装（用户）
 
 - 方式 A（宿主界面）：Win顺 → 插件管理 → 本地安装 → 选择 `.wsplugin` → 确认（unreviewed-native 提示）→ 停用再启用插件（或重启宿主）
 - 方式 B（手动）：解包到 `%LOCALAPPDATA%\WinShun\plugins\ra9fael.wifi\`（`plugin.json` 必须在目录根部）→ 重启 Win顺
-- 首次启用弹权限确认（提权、剪贴板写入）；lazy 启动，首次输入 `wifi` 才拉起进程
+- 首次启用弹权限确认（提权、剪贴板写入、窗口与 Pictures 写入）；lazy 启动，首次输入 `wifi` 才拉起进程
 
 ## 升级
 

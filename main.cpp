@@ -1,12 +1,13 @@
 // main.cpp — ra9fael.wifi: see the current Wi-Fi connection, saved profiles
 // and nearby networks; connect, disconnect, reveal the password, forget a
-// network, copy the profile XML. A resident JSON-RPC plugin on stdio; Win32 +
-// CRT only (no Qt, no "ui").
+// network, share a Wi-Fi QR code, copy the profile XML. A resident JSON-RPC
+// plugin on stdio; native Windows APIs and CRT, with no Qt dependency.
 //
 // English code/comments per project convention; user-facing strings follow
 // the host locale (plugin.chinese()).
 
 #include "native.h"
+#include "qr_image.h"
 
 using namespace winshun;
 using namespace wifiname;
@@ -42,6 +43,11 @@ std::vector<Action> actionsFor(const Network& n, bool zh)
     if (n.saved) {
         actions.push_back(Action {"password", zh ? "查看密码" : "Reveal password", "Shift+Enter"});
         actions.push_back(Action {"copyPassword", zh ? "复制密码" : "Copy password", ""});
+        if (n.auth != Auth::Enterprise) {
+            actions.push_back(Action {"copyQr", zh ? "复制 Wi-Fi 二维码" : "Copy Wi-Fi QR code", ""});
+            actions.push_back(Action {"previewQr", zh ? "预览 Wi-Fi 二维码" : "Preview Wi-Fi QR code", ""});
+            actions.push_back(Action {"saveQr", zh ? "保存 Wi-Fi 二维码 PNG" : "Save Wi-Fi QR PNG", ""});
+        }
         actions.push_back(Action {"copyXml", zh ? "复制配置 XML" : "Copy profile XML", ""});
         actions.push_back(Action {"forget", zh ? "忘记网络" : "Forget network", ""});
     }
@@ -58,6 +64,7 @@ Item forgetConfirmItem(const Network& n, bool zh)
     item.subtitle = zh ? "Enter 删除这个配置；Esc 返回列表" : "Enter deletes this profile; Esc goes back";
     item.icon = "color:#dc2626";
     item.withData(Json::Object {{"ssid", n.ssid},
+        {"profile", n.profileName},
         {"bssid", n.bssid},
         {"interface", n.interfaceName},
         {"saved", n.saved},
@@ -92,6 +99,7 @@ Item rowToItem(const Network& n, const Settings& st, bool zh, const std::string&
         item.icon = "color:#64748b";
     item.withCopy(n.ssid);
     item.withData(Json::Object {{"ssid", n.ssid},
+        {"profile", n.profileName},
         {"bssid", n.bssid},
         {"interface", n.interfaceName},
         {"saved", n.saved},
@@ -128,21 +136,24 @@ public:
         const bool zh = chinese();
         const Json& data = a.item["data"];
         const std::string ssid = data["ssid"].toString();
+        const std::string profile = data["profile"].toString().empty() ? ssid : data["profile"].toString();
         const std::string interfaceName = data["interface"].toString();
         const bool saved = data["saved"].toBool();
         const bool connected = data["connected"].toBool();
         const bool open = data["open"].toBool();
 
         if (a.action == "connect")
-            return doConnect(ssid, interfaceName, saved, connected, open, zh);
+            return doConnect(saved ? profile : ssid, interfaceName, saved, connected, open, zh);
         if (a.action == "disconnect")
             return doDisconnect(interfaceName, zh);
         if (a.action == "password")
-            return doReveal(ssid, interfaceName, zh);
+            return doReveal(profile, interfaceName, zh);
         if (a.action == "copyPassword")
-            return doCopyPassword(ssid, interfaceName, zh);
+            return doCopyPassword(profile, interfaceName, zh);
         if (a.action == "copyXml")
-            return doCopyXml(ssid, interfaceName, zh);
+            return doCopyXml(profile, interfaceName, zh);
+        if (a.action == "copyQr" || a.action == "previewQr" || a.action == "saveQr")
+            return doQr(ssid, profile, interfaceName, a.action, zh);
         if (a.action == "forget")
             return doForget(a, ssid, interfaceName, zh);
 
@@ -151,8 +162,9 @@ public:
 
 private:
     Settings m_settings;
+    QrPreview m_preview;
 
-    // Keys this session has revealed, by SSID. Memory only: never written to
+    // Keys this session has revealed, by WLAN profile name. Memory only: never written to
     // disk, never logged, cleared when the process ends (spec §7).
     std::map<std::string, std::string> m_revealed;
 
@@ -224,7 +236,7 @@ private:
         for (const Network& n : rows) {
             if (static_cast<int>(items.size()) >= limit)
                 break;
-            items.push_back(rowToItem(n, m_settings, zh, revealedFor(n.ssid)));
+            items.push_back(rowToItem(n, m_settings, zh, revealedFor(n.profileName.empty() ? n.ssid : n.profileName)));
         }
         return items;
     }
@@ -373,6 +385,42 @@ private:
         return {effect::copy(xml), effect::notify(zh ? "配置已复制" : "Profile copied")};
     }
 
+    Effects doQr(const std::string& ssid, const std::string& profile, const std::string& interfaceName,
+        const std::string& action, bool zh)
+    {
+        WlanSession session;
+        GUID guid {};
+        if (!openFor(interfaceName, session, guid))
+            return {effect::notify(zh ? "找不到无线网卡" : "No wireless adapter"), effect::keep()};
+        std::string xml;
+        DWORD error = 0;
+        if (!profileXml(session.handle(), guid, profile, true, xml, &error))
+            return {effect::notify(error == ERROR_ACCESS_DENIED ? qrProblem(QrStatus::NeedsKey, zh)
+                : (zh ? "无法读取已保存的 Wi-Fi 配置" : "Could not read the saved Wi-Fi profile")), effect::keep()};
+        const Profile parsed = parseProfile(xml);
+        if (parsed.ssid != ssid)
+            return {effect::notify(zh ? "网络配置已变化，请刷新后重试" : "The profile changed; refresh and retry"), effect::keep()};
+        const auto qr = makeWifiQr(parsed);
+        if (qr.status != QrStatus::Ready)
+            return {effect::notify(qrProblem(qr.status, zh)), effect::keep()};
+        auto image = renderWifiQr(qr.payload);
+        if (image.size == 0)
+            return {effect::notify(zh ? "二维码生成失败" : "Could not generate the QR code"), effect::keep()};
+        if (action == "copyQr") {
+            const bool copied = copyQrImage(image);
+            return {effect::notify(copied ? (zh ? "Wi-Fi 二维码已复制" : "Wi-Fi QR code copied")
+                : (zh ? "剪贴板忙，请重试" : "Clipboard busy; please retry")), effect::keep()};
+        }
+        if (action == "previewQr") {
+            if (!m_preview.show(std::move(image), parsed.ssid, zh))
+                return {effect::notify(zh ? "预览窗口打开失败" : "Could not open the preview"), effect::keep()};
+            return {effect::hide()};
+        }
+        const auto path = saveQrInPictures(image);
+        return {effect::notify(path.empty() ? (zh ? "保存 PNG 失败" : "Could not save the PNG")
+            : (zh ? "已保存 " : "Saved ") + winshun::utf8(path)), effect::keep()};
+    }
+
     Effects doForget(const ActionRequest& a, const std::string& ssid, const std::string& interfaceName, bool zh)
     {
         if (!a.item["data"]["confirmForget"].toBool()) {
@@ -398,7 +446,8 @@ private:
         GUID guid {};
         if (!openFor(interfaceName, session, guid))
             return {effect::notify(zh ? "找不到无线网卡" : "No wireless adapter"), effect::keep()};
-        const ActionResult r = deleteProfile(session.handle(), guid, ssid);
+        const std::string profile = a.item["data"]["profile"].toString();
+        const ActionResult r = deleteProfile(session.handle(), guid, profile.empty() ? ssid : profile);
         if (!r.ok) {
             log("warn", "forget failed: " + r.problem);
             // A group-policy profile cannot be deleted by the user.
@@ -417,7 +466,9 @@ private:
 
 } // namespace
 
+#ifndef WIFI_TEST
 int main()
 {
     return WifiPlugin().serve();
 }
+#endif

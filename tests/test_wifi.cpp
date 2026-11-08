@@ -4,6 +4,7 @@
 // Pure logic.h only — no wireless adapter is touched.
 
 #include "../logic.h"
+#include "../wifi_qr.h"
 
 #include <cstdio>
 
@@ -499,6 +500,63 @@ static void testSettings()
 
 // ---- main ---------------------------------------------------------------------------------
 
+static void testWifiQr()
+{
+    const std::string xml = "<WLANProfile><name>different profile name</name><SSIDConfig><SSID><name>Cafe &amp; 中文</name></SSID>"
+        "<nonBroadcast>true</nonBroadcast></SSIDConfig><authentication>WPA2PSK</authentication><encryption>AES</encryption>"
+        "<sharedKey><protected>false</protected><keyMaterial>mywep;pass</keyMaterial></sharedKey></WLANProfile>";
+    Profile p = parseProfile(xml);
+    CHECK_EQ(p.name, "different profile name");
+    CHECK_EQ(p.ssid, "Cafe & 中文");
+    CHECK(p.hidden);
+    CHECK(makeWifiQr(p).status == QrStatus::Ready);
+    CHECK_EQ(makeWifiQr(p).payload, "WIFI:T:WPA;S:Cafe & 中文;P:mywep\\;pass;H:true;;");
+    CHECK_EQ(escapeWifi("\\;,:\""), "\\\\\\;\\,\\:\\\"");
+    p.hidden = false;
+    p.auth = Auth::Wpa3;
+    CHECK(makeWifiQr(p).payload.find("T:WPA;") != std::string::npos);
+    p.keyProtected = true;
+    CHECK(makeWifiQr(p).status == QrStatus::NeedsKey);
+    CHECK(makeWifiQr(p).payload.empty());
+    p.keyProtected = false;
+    p.keyMaterial.clear();
+    CHECK(makeWifiQr(p).status == QrStatus::NeedsKey);
+    p.auth = Auth::Enterprise;
+    CHECK(makeWifiQr(p).status == QrStatus::Enterprise);
+    p.auth = Auth::Open;
+    p.oneX = true;
+    CHECK(makeWifiQr(p).status == QrStatus::Enterprise);
+    p.oneX = false;
+    CHECK(makeWifiQr(p).status == QrStatus::Unsupported);
+    p.hasKey = false;
+    p.cipherText = "none";
+    CHECK_EQ(makeWifiQr(p).payload, "WIFI:T:nopass;S:Cafe & 中文;;");
+    p.auth = Auth::Unknown;
+    CHECK(makeWifiQr(p).status == QrStatus::Unsupported);
+    p.ssid.clear();
+    CHECK(makeWifiQr(p).status == QrStatus::NoSsid);
+    Profile wep = parseProfile("<name>legacy</name><authentication>open</authentication><encryption>WEP</encryption>"
+        "<sharedKey><protected>false</protected><keyMaterial>abcde</keyMaterial></sharedKey>");
+    CHECK(wep.auth == Auth::Wep);
+    CHECK_EQ(makeWifiQr(wep).payload, "WIFI:T:WEP;S:legacy;P:abcde;;");
+    const auto bitmap = renderWifiQr(makeWifiQr(wep).payload);
+    CHECK(bitmap.size > 0);
+    CHECK(bitmap.pixels.size() == static_cast<size_t>(bitmap.size) * bitmap.size);
+    CHECK(bitmap.pixels[0] == 0xffffffffu);
+    CHECK(bitmap.pixels[32 * bitmap.size + 32] == 0xff000000u);
+    CHECK(renderWifiQr(std::string(4000, 'x')).size == 0);
+
+    Network saved = net("same ssid", 0, true, false);
+    saved.profileName = "real-profile";
+    saved.interfaceName = "saved-adapter";
+    Network scan = net("same ssid", -40, false, true);
+    scan.interfaceName = "scan-adapter";
+    for (const auto& rows : {mergeBySsid({scan, saved}), mergeBySsid({saved, scan})}) {
+        CHECK_EQ(rows[0].profileName, "real-profile");
+        CHECK_EQ(rows[0].interfaceName, "saved-adapter");
+    }
+}
+
 int main()
 {
     testXmlText();
@@ -516,6 +574,7 @@ int main()
     testConnect();
     testForgetStep();
     testSettings();
+    testWifiQr();
 
     std::printf("%d checks, %d failed\n", g_checks, g_failed);
     return g_failed == 0 ? 0 : 1;
