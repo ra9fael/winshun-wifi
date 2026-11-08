@@ -412,7 +412,7 @@ private:
                 : (zh ? "剪贴板忙，请重试" : "Clipboard busy; please retry")), effect::keep()};
         }
         if (action == "previewQr") {
-            if (!m_preview.show(std::move(image), parsed.ssid, zh))
+            if (!m_preview.show(std::move(image), parsed, zh))
                 return {effect::notify(zh ? "预览窗口打开失败" : "Could not open the preview"), effect::keep()};
             return {effect::hide()};
         }

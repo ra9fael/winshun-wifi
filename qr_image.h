@@ -20,8 +20,13 @@ inline std::wstring saveQrInPictures(const QrBitmap& image)
 }
 class QrPreview {
 public:
-    bool show(QrBitmap image, const std::string& ssid, bool zh)
-    { return m_preview.show(previewBitmap(image), ssid, zh); }
+    bool show(QrBitmap image, const Profile& profile, bool zh)
+    {
+        const std::string detail = profile.auth == Auth::Open
+            ? (zh ? "无需密码" : "No password required")
+            : (zh ? "密码：" : "Password: ") + profile.keyMaterial;
+        return m_preview.show(previewBitmap(image), profile.ssid, zh, L"Wi-Fi QR", L"wifi-qr", detail);
+    }
     void close() { m_preview.close(); }
     HWND window() const { return m_preview.window(); }
 private:

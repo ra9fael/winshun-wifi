@@ -7,6 +7,7 @@
 
 ## [0.2.1] - 2026-11-09
 
+- Keep the preview caption limited to the SSID; show the password only in the open context menu, or "No password required" for open networks.
 - Use the same native preview window in QR and Wi-Fi: plugin icon, one elided content line, titlebar pin toggle, and no topmost flag by default. Image actions stay in the context menu.
 - Mouse-wheel zoom scales the image and window together within the monitor work area.
 - Keep focused QR previews open after focus changes; resize with window borders and drag anywhere in the content to move.

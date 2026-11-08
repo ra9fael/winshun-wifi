@@ -60,12 +60,12 @@ int wmain(int argc, wchar_t** argv)
             return 7;
         QrPreview preview;
         if (interactive) {
-            if (!preview.show(image, profile.ssid, true)) return 8;
+            if (!preview.show(image, profile, true)) return 8;
             while (preview.window()) Sleep(50);
             return 0;
         }
         for (int i = 0; i < 3; ++i) {
-            if (!preview.show(image, profile.ssid, true))
+            if (!preview.show(image, profile, true))
                 return 8;
             Sleep(150);
             HWND window = preview.window();

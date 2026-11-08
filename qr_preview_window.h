@@ -171,7 +171,7 @@ public:
             m_thread.join();
     }
 
-    bool show(Bitmap image, const std::string& ssid, bool zh, const std::wstring& title = L"Wi-Fi QR", const std::wstring& prefix = L"wifi-qr")
+    bool show(Bitmap image, const std::string& ssid, bool zh, const std::wstring& title = L"Wi-Fi QR", const std::wstring& prefix = L"wifi-qr", const std::string& menuDetail = {})
     {
         close();
         m_image = std::move(image);
@@ -179,6 +179,16 @@ public:
         m_prefix = prefix;
         m_pinned = false;
         m_hint.clear();
+        m_menuDetail.clear();
+        // Menu text treats ampersands as mnemonics and tabs as shortcut columns.
+        // Keep the optional detail literal and confined to the open context menu.
+        for (const wchar_t ch : winshun::wide(menuDetail)) {
+            if (ch == L'&') m_menuDetail += L"&&";
+            else if (ch == L'\n') m_menuDetail += L"\\n";
+            else if (ch == L'\r') m_menuDetail += L"\\r";
+            else if (ch == L'\t') m_menuDetail += L"\\t";
+            else m_menuDetail += ch;
+        }
         m_ssid = winshun::wide(ssid);
         std::replace(m_ssid.begin(), m_ssid.end(), L'\n', L' ');
         std::replace(m_ssid.begin(), m_ssid.end(), L'\r', L' ');
@@ -304,6 +314,10 @@ private:
     {
         HMENU menu = CreatePopupMenu();
         if (!menu) return;
+        if (!m_menuDetail.empty()) {
+            AppendMenuW(menu, MF_STRING | MF_DISABLED | MF_GRAYED, 0, m_menuDetail.c_str());
+            AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+        }
         AppendMenuW(menu, MF_STRING, 1, m_zh ? L"复制图片" : L"Copy image");
         AppendMenuW(menu, MF_STRING, 2, m_zh ? L"保存 PNG" : L"Save PNG");
         AppendMenuW(menu, MF_STRING, 3, m_zh ? L"恢复默认大小" : L"Restore default size");
@@ -478,7 +492,7 @@ private:
     std::thread m_thread;
     std::atomic<HWND> m_window {nullptr};
     Bitmap m_image;
-    std::wstring m_ssid, m_hint, m_title, m_prefix;
+    std::wstring m_ssid, m_hint, m_title, m_prefix, m_menuDetail;
     bool m_pinned = false;
     HICON m_icon = nullptr, m_pin = nullptr, m_pinActive = nullptr;
     int m_displaySize = 0;
