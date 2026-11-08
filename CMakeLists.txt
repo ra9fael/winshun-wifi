@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # The exe builds straight into the plugin folder, because plugin.json names
 # it as runtime.program. Keep the ra9fael.port / ra9fael.shell convention.
-add_executable(wifi main.cpp)
+add_executable(wifi main.cpp wifi.rc)
 target_compile_definitions(wifi PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
 # wlanapi: the whole plugin (WlanOpenHandle and friends). ole32: the GUIDs
 # wlanapi.h declares but does not define. user32: clipboard for

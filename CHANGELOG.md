@@ -1,5 +1,7 @@
 # 更新日志
 
+[English](CHANGELOG.en.md)
+
 本插件所有值得注意的变化。格式遵循
 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循
 [Semantic Versioning](https://semver.org/lang/zh-CN/)。`plugin.json` 里的
@@ -7,6 +9,17 @@
 提交上构建发布。
 
 ## [Unreleased]
+
+## [0.1.2] - 2026-11-09
+
+### Fixed
+
+- 修复可执行文件图标，补齐打包中的 ICO 和资源脚本。
+
+### Notes
+
+- 本次仅生成本地标签与安装包。实际验证范围见 docs/icon-validation.md；未进行 GitHub 发布。更新后需重新启动插件进程。
+
 
 ## [0.1.1] - 2026-11-08
 

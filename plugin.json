@@ -3,7 +3,7 @@
   "manifest": 1,
   "id": "ra9fael.wifi",
   "name": {"zh": "Wi-Fi", "en": "Wi-Fi"},
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": {
     "zh": "列出已保存与附近的 Wi-Fi：Enter 连接，Ctrl+Enter 断开，Shift+Enter 查看密码，支持忘记网络与复制配置；纯 wlanapi，不解析 netsh",
     "en": "List saved and nearby Wi-Fi networks: Enter connects, Ctrl+Enter disconnects, Shift+Enter reveals the password; forget or copy profiles. Native wlanapi, no netsh parsing"
