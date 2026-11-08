@@ -7,6 +7,7 @@
 
 ## [0.2.1] - 2026-11-09
 
+- Use the same native preview window in QR and Wi-Fi: plugin icon, one elided content line, titlebar pin toggle, and no topmost flag by default. Image actions stay in the context menu.
 - Mouse-wheel zoom scales the image and window together within the monitor work area.
 - Keep focused QR previews open after focus changes; resize with window borders and drag anywhere in the content to move.
 - Close the focused preview with Esc, Ctrl+D or Ctrl+W. Right-click to copy the original image, save PNG, restore the default size or close.

@@ -26,7 +26,7 @@ cmake --build build
 
 ## 发布
 
-1. `git tag v<ver> && git push origin main --tags`
+1. 先推送源码，手动运行 `release.yml`，指定源码 `ref` 且 `publish=false`；验证通过后创建并单独推送版本标签：`git tag -a v<ver> -m "Release v<ver>"`、`git push origin v<ver>`。完整参数见 [WORKFLOWS.md](../WORKFLOWS.md)。
 2. GitHub Release `v<ver>`：上传 `.wsplugin`；release notes 写变更点、SHA-256、构建命令，并注明：查看密码走 `WlanGetProfile` 明文读取（插件不自行提权，读不到时如实报错），查询和日志不包含密码；只有用户执行保存二维码动作才输出含连接凭据的 PNG
 3. 声明为社区原生包（`unreviewed-native`）
 

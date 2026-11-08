@@ -46,7 +46,7 @@ endforeach()
 enable_testing()
 add_test(NAME wifi_logic COMMAND wifi_tests)
 
-add_executable(wifi_qr_native_tests tests/test_qr_native.cpp)
+add_executable(wifi_qr_native_tests tests/test_qr_native.cpp wifi.rc)
 target_compile_definitions(wifi_qr_native_tests PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
 target_link_libraries(wifi_qr_native_tests PRIVATE wlanapi ole32 user32 gdi32 gdiplus)
 if(MSVC)
