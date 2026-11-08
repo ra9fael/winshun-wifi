@@ -6,7 +6,7 @@
     "zh": "Wi-Fi",
     "en": "Wi-Fi"
   },
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": {
     "zh": "管理已保存与附近的 Wi-Fi：连接、断开、查看密码、生成扫码连接二维码、忘记网络与复制配置",
     "en": "Manage saved and nearby Wi-Fi: connect, disconnect, reveal passwords, generate scan-to-join QR codes, forget networks and copy profiles"
@@ -32,7 +32,7 @@
     "start": "lazy",
     "timeoutMs": 3000,
     "memoryMB": 64,
-    "idleExitSec": 300
+    "idleExitSec": 0
   },
   "commands": [
     {

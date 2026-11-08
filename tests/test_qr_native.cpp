@@ -5,7 +5,8 @@
 
 int wmain(int argc, wchar_t** argv)
 {
-    const bool ui = argc > 1 && std::wstring(argv[1]) == L"--ui";
+    const bool interactive = argc > 1 && std::wstring(argv[1]) == L"--interactive";
+    const bool ui = interactive || (argc > 1 && std::wstring(argv[1]) == L"--ui");
     Profile profile;
     profile.ssid = "Cafe ; 中文";
     profile.auth = Auth::Wpa2;
@@ -58,6 +59,11 @@ int wmain(int argc, wchar_t** argv)
         if (!copyQrImage(image) || !IsClipboardFormatAvailable(CF_DIB))
             return 7;
         QrPreview preview;
+        if (interactive) {
+            if (!preview.show(image, profile.ssid, true)) return 8;
+            while (preview.window()) Sleep(50);
+            return 0;
+        }
         for (int i = 0; i < 3; ++i) {
             if (!preview.show(image, profile.ssid, true))
                 return 8;

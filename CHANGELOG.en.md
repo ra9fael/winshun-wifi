@@ -5,6 +5,14 @@
 ## [Unreleased]
 
 
+## [0.2.1] - 2026-11-09
+
+- Mouse-wheel zoom scales the image and window together within the monitor work area.
+- Keep focused QR previews open after focus changes; resize with window borders and drag anywhere in the content to move.
+- Close the focused preview with Esc, Ctrl+D or Ctrl+W. Right-click to copy the original image, save PNG, restore the default size or close.
+- Keep QR modules crisp while resizing, retain the current image snapshot for menu actions, and prevent five-minute idle shutdown while a preview is open.
+- Build, test and publish only on new version tags or manual runs; verification defaults to no publication.
+
 ## [0.2.0] - 2026-11-09
 
 - Add copy, preview and PNG-save QR actions to saved networks in wifi, with no QR-plugin dependency.
