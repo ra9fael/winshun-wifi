@@ -515,6 +515,30 @@ private:
             self->contextMenu(window, {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)});
             return 0;
         }
+        if (message == WM_MOUSEMOVE) {
+            POINT point {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+            const RECT close = self->buttonRect(window, true);
+            const bool over = PtInRect(&close, point) != 0;
+            if (over != self->m_hoverClose) {
+                self->m_hoverClose = over;
+                InvalidateRect(window, &close, FALSE); // the button reddens in place
+            }
+            // The leave is only reported once: arm it again for the next move.
+            if (!self->m_tracking) {
+                TRACKMOUSEEVENT track {sizeof(TRACKMOUSEEVENT), TME_LEAVE, window, 0};
+                self->m_tracking = TrackMouseEvent(&track) != 0;
+            }
+            return 0;
+        }
+        if (message == WM_MOUSELEAVE) {
+            self->m_tracking = false;
+            if (self->m_hoverClose) {
+                self->m_hoverClose = false;
+                const RECT close = self->buttonRect(window, true);
+                InvalidateRect(window, &close, FALSE);
+            }
+            return 0;
+        }
         if (message == WM_LBUTTONDOWN) {
             const POINT point {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
             const RECT pin = self->buttonRect(window, false), close = self->buttonRect(window, true);
@@ -634,7 +658,15 @@ private:
             const auto titleText = self->m_hint.empty() ? self->m_title : self->m_hint;
             DrawTextW(dc, titleText.c_str(), -1, &title, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
             if (self->m_pinned) { HBRUSH brush = CreateSolidBrush(RGB(216,235,252)); FillRect(dc, &pin, brush); DeleteObject(brush); }
-            HPEN pen = CreatePen(PS_SOLID, std::max(1, MulDiv(1, dpi, 96)), RGB(45,45,45));
+            // The close button reddens under the mouse and its cross turns
+            // white, as a window's own does.
+            if (self->m_hoverClose) {
+                HBRUSH brush = CreateSolidBrush(RGB(196, 43, 28));
+                FillRect(dc, &close, brush);
+                DeleteObject(brush);
+            }
+            HPEN pen = CreatePen(PS_SOLID, std::max(1, MulDiv(1, dpi, 96)),
+                self->m_hoverClose ? RGB(255, 255, 255) : RGB(45, 45, 45));
             const auto oldPen = SelectObject(dc, pen);
             const int cx = (pin.left + pin.right) / 2, cy = caption / 2, r = MulDiv(5, dpi, 96);
             const int pinSize = MulDiv(18, dpi, 96);
@@ -668,6 +700,7 @@ private:
     Bitmap m_image;
     std::wstring m_ssid, m_hint, m_title, m_prefix, m_menuDetail;
     bool m_pinned = false;
+    bool m_hoverClose = false, m_tracking = false; // the mouse over the close button
     HICON m_icon = nullptr, m_pin = nullptr, m_pinActive = nullptr;
     HPOWERNOTIFY m_powerNotify = nullptr;
     int m_displaySize = 0;
