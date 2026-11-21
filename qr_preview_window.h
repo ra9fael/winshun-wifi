@@ -11,9 +11,11 @@
 #include <gdiplus.h>
 #include <atomic>
 #include <future>
+#include <mutex>
 #include <thread>
 #include <cmath>
 #include <windowsx.h>
+#include <wtsapi32.h>
 
 namespace qrpreview {
 
@@ -23,20 +25,29 @@ struct Bitmap {
     int modules = 0;
 };
 
-inline void focusQrWindow(HWND window)
+// {6FE69556-704A-47A0-8F24-C28D936FDA47}: the display switched on or off,
+// which takes the window's surface with it.
+inline constexpr GUID kConsoleDisplayState = {0x6fe69556, 0x704a, 0x47a0, {0x8f, 0x24, 0xc2, 0x8d, 0x93, 0x6f, 0xda, 0x47}};
+
+// One attempt at the foreground, without waiting: joining the previous
+// foreground thread's input queue (AttachThreadInput) is not faster and waits
+// for its deactivation, so Win顺's own windows stopped using it (GitHub #111).
+inline bool activateQrWindow(HWND window)
 {
-    // The host grants foreground activation for user actions. If Windows still
-    // associates input with the previous foreground thread, join its input queue
-    // only for activation and detach immediately afterwards (also used by Qt).
-    const DWORD current = GetCurrentThreadId();
-    const HWND foreground = GetForegroundWindow();
-    const DWORD previous = foreground ? GetWindowThreadProcessId(foreground, nullptr) : 0;
-    const bool attached = previous && previous != current && AttachThreadInput(current, previous, TRUE);
     SetForegroundWindow(window);
-    SetActiveWindow(window);
+    BringWindowToTop(window);
     SetFocus(window);
-    if (attached)
-        AttachThreadInput(current, previous, FALSE);
+    return GetForegroundWindow() == window;
+}
+
+// The newest input has to be this process's for Windows to accept the call: an
+// empty mouse event (no move, no button, no wheel) is one, as Win顺's windows
+// send (PowerToys Run does the same, microsoft/PowerToys#4270).
+inline void sendEmptyInput()
+{
+    INPUT nothing {};
+    nothing.type = INPUT_MOUSE;
+    SendInput(1, &nothing, sizeof nothing);
 }
 
 inline BITMAPINFO qrBitmapInfo(const Bitmap& image)
@@ -223,10 +234,22 @@ public:
             const DWORD style = WS_POPUP | WS_SYSMENU | WS_THICKFRAME;
             AdjustWindowRectEx(&rect, style, FALSE, 0);
             m_default = {rect.right - rect.left, rect.bottom - rect.top};
-            const int width = m_geometry.right > m_geometry.left ? std::min(m_geometry.right - m_geometry.left, work.right - work.left) : m_default.cx;
-            const int height = m_geometry.bottom > m_geometry.top ? std::min(m_geometry.bottom - m_geometry.top, work.bottom - work.top) : m_default.cy;
-            const int x = m_geometry.right > m_geometry.left ? std::clamp(m_geometry.left, work.left, work.right - width) : work.left + (work.right - work.left - width) / 2;
-            const int y = m_geometry.bottom > m_geometry.top ? std::clamp(m_geometry.top, work.top, work.bottom - height) : work.top + (work.bottom - work.top - height) / 2;
+            // Several previews can be open at once, so a window that appears
+            // beside another one steps away from it instead of landing exactly
+            // on top of it; one that replaces a single window keeps its place.
+            RECT place {};
+            bool beside = false;
+            {
+                std::lock_guard lock(s_placeMutex);
+                place = s_place;
+                beside = s_live > 0;
+            }
+            const bool placed = place.right > place.left;
+            const int width = placed ? std::min(place.right - place.left, work.right - work.left) : m_default.cx;
+            const int height = placed ? std::min(place.bottom - place.top, work.bottom - work.top) : m_default.cy;
+            const int step = beside ? MulDiv(32, static_cast<int>(GetDpiForSystem()), 96) : 0;
+            const int x = placed ? std::clamp<LONG>(place.left + step, work.left, work.right - width) : work.left + (work.right - work.left - width) / 2;
+            const int y = placed ? std::clamp<LONG>(place.top + step, work.top, work.bottom - height) : work.top + (work.bottom - work.top - height) / 2;
             HWND window = CreateWindowExW(0, wc.lpszClassName, m_title.c_str(), style,
                 x, y,
                 width, height, nullptr, nullptr, wc.hInstance, this);
@@ -235,14 +258,26 @@ public:
                 ready.set_value(false);
                 return;
             }
+            {
+                std::lock_guard lock(s_placeMutex);
+                s_place = {x, y, x + width, y + height};
+                ++s_live;
+            }
             m_icon = static_cast<HICON>(LoadImageW(wc.hInstance, L"IDI_ICON1", IMAGE_ICON,
                 MulDiv(20, GetDpiForWindow(window), 96), MulDiv(20, GetDpiForWindow(window), 96), 0));
             SendMessageW(window, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(m_icon));
             SendMessageW(window, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(wc.hIcon));
             m_pin = static_cast<HICON>(LoadImageW(wc.hInstance, L"IDI_PIN", IMAGE_ICON, MulDiv(18, GetDpiForWindow(window), 96), MulDiv(18, GetDpiForWindow(window), 96), 0));
             m_pinActive = static_cast<HICON>(LoadImageW(wc.hInstance, L"IDI_PIN_ACTIVE", IMAGE_ICON, MulDiv(18, GetDpiForWindow(window), 96), MulDiv(18, GetDpiForWindow(window), 96), 0));
-            ShowWindow(window, SW_SHOW);
-            focusQrWindow(window);
+            WTSRegisterSessionNotification(window, NOTIFY_FOR_THIS_SESSION);
+            m_powerNotify = RegisterPowerSettingNotification(window, &kConsoleDisplayState,
+                DEVICE_NOTIFY_WINDOW_HANDLE);
+            // A surface can be taken away without a WM_PAINT following (a lock,
+            // the display off, a composition restart): repaint on the messages
+            // that come with those, and once in a while regardless.
+            SetTimer(window, kRepaintTimer, 5000, nullptr);
+            ShowWindow(window, SW_SHOWNORMAL);
+            beginActivation(window);
             UpdateWindow(window);
             ready.set_value(true);
             MSG msg {};
@@ -257,6 +292,100 @@ public:
     HWND window() const { return m_window.load(); }
 
 private:
+    // ---- timers ------------------------------------------------------------
+    static constexpr UINT kHintTimer = 1; // the hint in the title, once
+    static constexpr UINT kActivateTimer = 2; // watching the foreground
+    static constexpr UINT kRepaintTimer = 3; // the surface may be gone: repaint
+    static constexpr UINT kLateRepaintTimer = 4; // once more after an unlock
+    static constexpr UINT kActivateInterval = 40; // ms
+    static constexpr int kActivateTries = 12; // about 500 ms to get in front
+    static constexpr int kWatchTicks = 15; // about 600 ms to keep it there
+
+    // ---- the foreground ----------------------------------------------------
+    // The host lets this process take the foreground for an action
+    // (AllowSetForegroundWindow). That is not enough on its own: the launcher
+    // is still in front holding the click that asked for this window, and one
+    // that did come to the front loses it again when the launcher hides and
+    // Windows hands it back to the program it covered. So: try in growing
+    // steps, then watch for a moment.
+    void beginActivation(HWND window)
+    {
+        m_activated = activateQrWindow(window);
+        m_activationTries = 0;
+        m_watchTicks = 0;
+        m_takeBacks = 0;
+        SetTimer(window, kActivateTimer, kActivateInterval, nullptr);
+    }
+    // Joining the window in front's input queue makes Windows treat both as
+    // one, and it accepts the switch; it can wait for that window's
+    // deactivation, so it is the last step and only while the window is on its
+    // way up. The switch lands on the other thread's time: letting go at once
+    // undoes it.
+    static void shareAndActivate(HWND window)
+    {
+        const HWND front = GetForegroundWindow();
+        const DWORD thread = front ? GetWindowThreadProcessId(front, nullptr) : 0;
+        const DWORD self = GetCurrentThreadId();
+        const bool attached = thread && thread != self && AttachThreadInput(self, thread, TRUE);
+        activateQrWindow(window);
+        for (int waited = 0; attached && waited < 12 && GetForegroundWindow() != window; ++waited)
+            Sleep(10);
+        if (attached)
+            AttachThreadInput(self, thread, FALSE);
+    }
+    static void tryActivate(HWND window, int tries)
+    {
+        if (tries < 2) {
+            activateQrWindow(window);
+        } else if (tries < 4) {
+            // The newest input ours: an empty mouse event, as Win顺's windows
+            // send (microsoft/PowerToys#4270).
+            sendEmptyInput();
+            activateQrWindow(window);
+        } else {
+            sendEmptyInput();
+            if (!activateQrWindow(window))
+                shareAndActivate(window);
+        }
+    }
+    void watchActivation(HWND window)
+    {
+        if (GetForegroundWindow() == window) {
+            m_activated = true;
+            if (++m_watchTicks > kWatchTicks)
+                KillTimer(window, kActivateTimer);
+            return;
+        }
+        if (m_activated) {
+            // It had the front and lost it again: the launcher hid and handed
+            // it back to the program it covered. Take it once more, then leave
+            // it to the user.
+            if (m_takeBacks++ >= 1 || ++m_watchTicks > kWatchTicks) {
+                KillTimer(window, kActivateTimer);
+                return;
+            }
+            tryActivate(window, 4);
+            return;
+        }
+        if (++m_activationTries > kActivateTries) {
+            // Never in front and out of tries: above the ordinary windows all
+            // the same, so what it shows is not left behind one. Not over a
+            // pinned window: that flag is the user's.
+            if (!m_pinned) {
+                SetWindowPos(window, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                SetWindowPos(window, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            }
+            KillTimer(window, kActivateTimer);
+            return;
+        }
+        tryActivate(window, m_activationTries);
+    }
+    void repaintSoon(HWND window)
+    {
+        InvalidateRect(window, nullptr, TRUE);
+        SetTimer(window, kLateRepaintTimer, 500, nullptr); // the surface comes back a moment later
+    }
+
     int captionHeight(HWND window) const { return MulDiv(36, GetDpiForWindow(window), 96); }
     RECT buttonRect(HWND window, bool close) const
     {
@@ -356,7 +485,7 @@ private:
         }
         if (command == 1 || command == 2) {
             SetWindowTextW(window, (m_title + L" — " + m_hint).c_str());
-            SetTimer(window, 1, 3500, nullptr);
+            SetTimer(window, kHintTimer, 3500, nullptr);
         }
         InvalidateRect(window, nullptr, TRUE);
     }
@@ -400,11 +529,21 @@ private:
             self->executeCommand(window, LOWORD(wparam));
             return 0;
         }
-        if (message == WM_TIMER && wparam == 1) {
-            self->m_hint.clear();
-            SetWindowTextW(window, self->m_title.c_str());
-            KillTimer(window, 1);
-            InvalidateRect(window, nullptr, TRUE);
+        if (message == WM_TIMER) {
+            if (wparam == kHintTimer) {
+                self->m_hint.clear();
+                SetWindowTextW(window, self->m_title.c_str());
+                KillTimer(window, kHintTimer);
+                InvalidateRect(window, nullptr, TRUE);
+            } else if (wparam == kActivateTimer) {
+                self->watchActivation(window);
+            } else if (wparam == kRepaintTimer) {
+                if (IsWindowVisible(window))
+                    InvalidateRect(window, nullptr, FALSE);
+            } else if (wparam == kLateRepaintTimer) {
+                KillTimer(window, kLateRepaintTimer);
+                InvalidateRect(window, nullptr, TRUE);
+            }
             return 0;
         }
         if (message == WM_MOUSEWHEEL) {
@@ -430,8 +569,43 @@ private:
             return 0;
         }
         if (message == WM_SIZE) { InvalidateRect(window, nullptr, TRUE); return 0; }
+        // The window's surface can be taken away and the WM_PAINT that should
+        // follow does not always come: a black window until it is resized.
+        // Each of these says the surface was or will be lost.
+        if (message == WM_WTSSESSION_CHANGE) {
+            if (wparam == WTS_SESSION_UNLOCK)
+                self->repaintSoon(window);
+            return 0;
+        }
+        if (message == WM_POWERBROADCAST) {
+            if (wparam == PBT_APMRESUMEAUTOMATIC || wparam == PBT_APMRESUMESUSPEND)
+                InvalidateRect(window, nullptr, TRUE);
+            else if (wparam == PBT_POWERSETTINGCHANGE)
+                InvalidateRect(window, nullptr, TRUE);
+            return TRUE;
+        }
+        if (message == WM_DWMCOMPOSITIONCHANGED || message == WM_DISPLAYCHANGE
+            || message == WM_THEMECHANGED || message == WM_SYSCOLORCHANGE) {
+            InvalidateRect(window, nullptr, TRUE);
+            return 0;
+        }
+        if (message == WM_ACTIVATE && LOWORD(wparam) != WA_INACTIVE)
+            InvalidateRect(window, nullptr, TRUE);
         if (message == WM_DESTROY) {
-            GetWindowRect(window, &self->m_geometry);
+            RECT rect {};
+            const bool haveRect = GetWindowRect(window, &rect) != 0;
+            {
+                std::lock_guard lock(s_placeMutex);
+                if (haveRect && rect.right > rect.left)
+                    s_place = rect;
+                if (s_live > 0)
+                    --s_live;
+            }
+            WTSUnRegisterSessionNotification(window);
+            if (self->m_powerNotify) {
+                UnregisterPowerSettingNotification(self->m_powerNotify);
+                self->m_powerNotify = nullptr;
+            }
             if (self->m_icon) { DestroyIcon(self->m_icon); self->m_icon = nullptr; }
             if (self->m_pin) { DestroyIcon(self->m_pin); self->m_pin = nullptr; }
             if (self->m_pinActive) { DestroyIcon(self->m_pinActive); self->m_pinActive = nullptr; }
@@ -495,10 +669,23 @@ private:
     std::wstring m_ssid, m_hint, m_title, m_prefix, m_menuDetail;
     bool m_pinned = false;
     HICON m_icon = nullptr, m_pin = nullptr, m_pinActive = nullptr;
+    HPOWERNOTIFY m_powerNotify = nullptr;
     int m_displaySize = 0;
     bool m_zh = true;
-    RECT m_geometry {};
     SIZE m_default {};
+    // Where the newest window is (it was created there or dragged there) and
+    // how many are open, both per process: the next window is placed from them,
+    // written on its own thread and read on the next one's.
+    inline static std::mutex s_placeMutex;
+    inline static RECT s_place {};
+    inline static int s_live = 0;
+    // The foreground watch (beginActivation): whether the window has had the
+    // front, how many ticks it was watched for, how often it was asked, and
+    // how often it was taken back.
+    bool m_activated = false;
+    int m_activationTries = 0;
+    int m_watchTicks = 0;
+    int m_takeBacks = 0;
 };
 
 } // namespace qrpreview

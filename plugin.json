@@ -45,6 +45,7 @@
         "zh": "Wi-Fi",
         "en": "Wi-Fi"
       },
+      "icon": "glyph:U+E701",
       "hint": {
         "zh": "留空看当前连接与已保存网络；输入筛选 SSID",
         "en": "empty shows the current connection and saved networks; type to filter SSID"

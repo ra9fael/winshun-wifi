@@ -12,7 +12,7 @@ target_compile_definitions(wifi PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND
 # wlanapi: the whole plugin (WlanOpenHandle and friends). ole32: the GUIDs
 # wlanapi.h declares but does not define. user32: clipboard for
 # copyPassword/copyXml.
-target_link_libraries(wifi PRIVATE wlanapi ole32 user32 gdi32 gdiplus)
+target_link_libraries(wifi PRIVATE wlanapi ole32 user32 gdi32 gdiplus wtsapi32)
 
 if(MSVC)
     target_compile_options(wifi PRIVATE /utf-8 /W4 /permissive-)
@@ -48,7 +48,7 @@ add_test(NAME wifi_logic COMMAND wifi_tests)
 
 add_executable(wifi_qr_native_tests tests/test_qr_native.cpp wifi.rc)
 target_compile_definitions(wifi_qr_native_tests PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-target_link_libraries(wifi_qr_native_tests PRIVATE wlanapi ole32 user32 gdi32 gdiplus)
+target_link_libraries(wifi_qr_native_tests PRIVATE wlanapi ole32 user32 gdi32 gdiplus wtsapi32)
 if(MSVC)
     target_compile_options(wifi_qr_native_tests PRIVATE /utf-8 /W4 /permissive-)
 endif()

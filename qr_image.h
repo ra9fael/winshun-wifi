@@ -4,7 +4,6 @@
 #include "qr_preview_window.h"
 
 namespace wifiname {
-using qrpreview::focusQrWindow;
 inline qrpreview::Bitmap previewBitmap(const QrBitmap& image)
 {
     return {image.size, image.pixels, image.size / 8};
