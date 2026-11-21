@@ -4,13 +4,19 @@
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-22
+
+### Added
+
+- The preview's close button reddens under the mouse, its cross turning white, and dulls again when the mouse leaves, like a window's own close button.
+
 ### Changed
 
 - The shared preview window code supports several windows at once: a new window opens beside the newest one (this plugin's Wi-Fi preview still keeps a single window).
 
 ### Fixed
 
-- A QR preview opened from a menu no longer stays behind other programs: the window goes on asking for the foreground for a moment after it appears, and takes it back once when the launcher hides and hands it to the program it covered.
+- A preview opened from a menu no longer stays behind other programs: the window goes on asking for the foreground for a moment after it appears, and takes it back once when the launcher hides and hands it to the program it covered.
 - The preview no longer turns black after a session unlock, a resume, the display coming back or a composition restart: it repaints on those and every five seconds as the last resort.
 
 ## [0.2.1] - 2026-11-09

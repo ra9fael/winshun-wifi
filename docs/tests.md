@@ -4,7 +4,7 @@
 
 `wifi` 已保存网络新增 copyQr、previewQr、saveQr。使用实际 WLAN profile 名与网卡定位配置，动作时重读明文；查询结果只携带网络和配置身份。`wifi_qr.h` 校验认证、转义 WIFI 载荷并渲染，`qrcode.h` 为从 ra9fael.qr 复用的 MIT 编码器，`qr_image.h` 使用 Win32/GDI+ 实现剪贴板、PNG 和独立消息线程预览，无 Qt 依赖。
 
-预览显示后调用 SetForegroundWindow、SetActiveWindow、SetFocus；重复打开先销毁旧窗口。宿主在用户动作前通过 AllowSetForegroundWindow 授权插件激活。新权限为 ui 与 Pictures 写入，保留 elevated 和 clipboard:write。只有 saveQr 会写含连接凭据的 PNG。
+预览显示后按三步尝试取得前台：直接 SetForegroundWindow / BringWindowToTop / SetFocus；发一个空鼠标事件后重试；把本线程的输入队列接到前台窗口的线程上再重试（切换落地后才摘开）。成为前台后继续观察约 600 ms，丢了再取回一次。Wi-Fi 预览重复打开先销毁旧窗口（该窗口代码本身支持多个窗口并存），关闭按钮悬停时变红。宿主在用户动作前通过 AllowSetForegroundWindow 授权插件激活。新权限为 ui 与 Pictures 写入，保留 elevated 和 clipboard:write。只有 saveQr 会写含连接凭据的 PNG。
 
 `wifi_tests` 覆盖特殊字符、中文、隐藏网络、WEP、WPA3、企业认证、受保护或缺失密码，以及配置名与 SSID 不同的合并行为。`wifi_qr_native_tests` 使用虚构数据覆盖动作和 PNG，`--ui` 额外验证复制图片、连续预览的前台/键盘焦点、Esc 关闭。测试不改变真实网络连接。发布验证见 [validation-0.2.0.md](validation-0.2.0.md)。
 
